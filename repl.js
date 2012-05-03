@@ -15,3 +15,8 @@ var rs = repl.start('>');  //{prompt:'>', writer : function (obj) {return util.i
 
 _.extend(rs.context, c);
 
+rs.context.ls = function () {
+  c.load('first');
+  c.save();
+  return "loaded and saved";
+}

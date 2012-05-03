@@ -8,7 +8,7 @@ var util = require('util');
 
 //shared global between here and repl
 // depth controls inspect level, version controls whether to version the save files
-var gl = {depth : null, version: false, dir : './tests/'
+var gl = {depth : null, version: false, dir : './pretests/', testdir : './test/'
   , history : [], names : {}, inp: {}, out : {}, data : {}, errors : [], count:0
 };
 
@@ -82,6 +82,7 @@ c.itemFilter = function (filter) {
       ret.push(i);
     }
   }
+  return ret;
 };
 
 //lists all outputs name and status or the output of the numbered one.
@@ -105,25 +106,70 @@ c.list = function (pos, options) {
 
 //store an output into data
 c.store = function (pos) {
+  if (typeof pos === "undefined") {
+    pos = gl.names.length-1;
+  }
   var s = gl.names[pos][0];
   var t = gl.names[pos][1];
-  gl.data[s][t] = [gl.inp[s][t], gl.out[s][t]];  
+  gl.data[s][t] = {inp: gl.inp[s][t], out : gl.out[s][t]};  
+  gl.names[pos][2] = true; //change status
+  return pos + " stored";
 };
 
 //store all--unwise to use
 c.stall = function () {
-  var s, t, i, n;
+  var  i, n;
   n = gl.names.length;
   for (i = 0; i < n; i += 1){
-    s = gl.names[i][0];
-    t = gl.names[i][1];
-    gl.data[s][t] = {inp: gl.inp[s][t], out: gl.out[s][t]};  
+    c.store(i);
   }
-  return "data stored";
+  return "all tests stored, not saved";
 };
+
+var writeTests = function () {
+  var suite, test, cur
+    , ret = '_ = require("underscore");\n\n'
+          + 'util = require("util"); \n\n'
+    ;
+    
+  for (suite in gl.data) {
+    ret += 'suite("'+ suite + '");\n\n';
+    for (test in gl.data[suite]) {
+      cur = gl.data[suite][test];
+      ret += 'test("' + test + '", function () {\n ';
+      if (cur.out[0] === 'error') {
+        ret += 'var flag = true; try {\n  suites.' + suite + '.apply(null, ' 
+            + util.inspect(cur.inp, false, null) + ') ); \n'
+            + '} catch (e) {\n'
+            + '  flag = false;\n'
+            + '  if (_.isEqual(e, ' + cur.out[1] + ') ) {\n'
+            + '    throw new Error ("wrong error", e);\n'
+            + '  }\n'
+            + '}\n'
+            + 'if (flag) {\n'
+            + '  throw new Error ("failed to throw error");'
+            + '}'
+            ;
+      } else {
+        ret += 'var result = suites.' + suite + '.apply(null, ' 
+            + util.inspect(cur.inp, false, null) + ');\n '
+            + 'var pass = _.isEqual(result, ' + util.inspect(cur.out, false, null) + ' ); \n'
+            + 'if (!pass) {\n'
+            + '  throw new Error (util.inspect(result) + " not equal to " + "' + util.inspect(cur.out, false, null) + '" + "\\n     Input:  '
+            + util.inspect(cur.inp, false, null) + '"  );\n'
+            + '}\n'
+      }
+      ret += '}); \n\n';
+    }
+  }
+  
+  return ret;
+};
+
 
 //save current data state to file
 c.save = function (fname, version) {
+  var testname = gl.testdir + (fname || gl.file) + '.js';
   fname = gl.dir + (fname || gl.file);
   version = version || gl.version;
   try {
@@ -132,11 +178,15 @@ c.save = function (fname, version) {
     } else if (version) {
       fs.rename(fname+'.js', fname+'_'+version+'.js');
     }
-    fs.writeFileSync(fname + '.js', gl.text.replace(/\/\/\-\-\-\-[\s\S]*/
-      , '//----\n var data = ' + util.inspect(gl.data, false, null) + ';\n'
+    // write in pretest
+    fs.writeFileSync(fname + '.js', gl.text 
+      + '//----\n var data = ' + util.inspect(gl.data, false, null) + ';\n'
       + 'if (module) {\n module.exports.data = data;\n}'
       , 'utf8'
-    ));
+    );
+    // write out tests
+    fs.writeFileSync(testname, gl.text.replace('module.exports.suites', 'suites') + writeTests() );
+    
     return "successfully saved";
    } catch (e) {
      return ["failed to save", e];
@@ -157,8 +207,8 @@ c.empty = function (obj) {
 c.testWrap = function (f) {
   return function () {
     return c.runTest(f, Array.prototype.slice.call(arguments, 1), arguments[0]);
-  }
-}
+  };
+};
 
 // load a file, run tests, report results
 c.load = function (fname) {
@@ -189,7 +239,7 @@ c.load = function (fname) {
    
    // load file
    try {
-     gl.text = fs.readFileSync(gl.dir+fname+'.js', 'utf8');
+     gl.text = fs.readFileSync(gl.dir+fname+'.js', 'utf8').split('//----')[0];
      delete require.cache[require.resolve(gl.dir+fname+'.js')];
      gl.current = require(gl.dir+fname+'.js');
    } catch (e) {
@@ -227,7 +277,7 @@ c.initObj = function (suite) {
     gl.out[suite] = {};
   }
   
-}
+};
 
 
 // the real basic run example
@@ -241,7 +291,7 @@ c.runTest = function (f, input, testname) {
     f = gl.current.suites[f] || gl.defaultF;
   }
   if (! _.isFunction(f)) {
-    throw new Error("no f specified, no default either");
+    throw new Error(["no f specified, no default either", f, input, testname]);
   }
   testname = testname || JSON.stringify(input);
   suite = f.suite;
@@ -256,7 +306,7 @@ c.runTest = function (f, input, testname) {
         gl.out[suite][testname] = result = f.apply(null, input);
       } catch (e) {
         gl.out[suite][testname] = result = ["error", e];
-        err = flag;
+        err = true;
       }  
       if (gl.data[suite][testname]) {
         pass = _.isEqual(result, gl.data[suite][testname].out);
