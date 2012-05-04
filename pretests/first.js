@@ -1,5 +1,6 @@
 /*globals module, require, console, exports*/
 
+var _ = require('underscore');
 
 module.exports.suites = {
   sum : function () {
@@ -17,6 +18,9 @@ module.exports.suites = {
       , prod = 1
       ;
     for (i = arguments.length-1; i > -1; i -= 1) {
+      if (! _.isNumber(arguments[i])) {
+        throw new Error("not a number", i);
+      }
       prod *= arguments[i];
     }
       
@@ -38,7 +42,8 @@ module.exports.suites = {
      one: { inp: [ 2 ], out: 2 },
      inf: { inp: [ Infinity ], out: Infinity },
      'inf -inf': { inp: [ Infinity, -Infinity ], out: -Infinity },
-     'inf -inf 0': { inp: [ Infinity, -Infinity, 0 ], out: NaN } } };
+     'inf -inf 0': { inp: [ Infinity, -Infinity, 0 ], out: NaN },
+     'bad args': { inp: [ '4' ], out: [ 'error', 'Error: not a number' ] } } };
 if (module) {
  module.exports.data = data;
 }

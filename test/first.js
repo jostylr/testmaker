@@ -1,5 +1,6 @@
 /*globals module, require, console, exports*/
 
+var _ = require('underscore');
 
 suites = {
   sum : function () {
@@ -17,7 +18,10 @@ suites = {
       , prod = 1
       ;
     for (i = arguments.length-1; i > -1; i -= 1) {
-      prod -= arguments[i];
+      if (! _.isNumber(arguments[i])) {
+        throw new Error("not a number", i);
+      }
+      prod *= arguments[i];
     }
       
     return prod;
@@ -36,7 +40,7 @@ test("0", function () {
  var result = suites.sum.apply(null, []);
  var pass = _.isEqual(result, 0 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "0" + "\n     input:  []"  );
+  throw new Error (util.inspect(result) + " not equal to " + "0" + "\n     Input:  []"  );
 }
 }); 
 
@@ -44,7 +48,7 @@ test("[4,5,6]", function () {
  var result = suites.sum.apply(null, [ 4, 5, 6 ]);
  var pass = _.isEqual(result, 15 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "15" + "\n     input:  [ 4, 5, 6 ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "15" + "\n     Input:  [ 4, 5, 6 ]"  );
 }
 }); 
 
@@ -52,7 +56,7 @@ test("one", function () {
  var result = suites.sum.apply(null, [ 3 ]);
  var pass = _.isEqual(result, 3 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "3" + "\n     input:  [ 3 ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "3" + "\n     Input:  [ 3 ]"  );
 }
 }); 
 
@@ -62,7 +66,7 @@ test("0", function () {
  var result = suites.mult.apply(null, []);
  var pass = _.isEqual(result, 1 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "1" + "\n     input:  []"  );
+  throw new Error (util.inspect(result) + " not equal to " + "1" + "\n     Input:  []"  );
 }
 }); 
 
@@ -70,7 +74,7 @@ test("two", function () {
  var result = suites.mult.apply(null, [ 3, 4 ]);
  var pass = _.isEqual(result, 12 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "12" + "\n     input:  [ 3, 4 ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "12" + "\n     Input:  [ 3, 4 ]"  );
 }
 }); 
 
@@ -78,7 +82,7 @@ test("three", function () {
  var result = suites.mult.apply(null, [ 3, 4, 7 ]);
  var pass = _.isEqual(result, 84 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "84" + "\n     input:  [ 3, 4, 7 ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "84" + "\n     Input:  [ 3, 4, 7 ]"  );
 }
 }); 
 
@@ -86,7 +90,7 @@ test("one", function () {
  var result = suites.mult.apply(null, [ 2 ]);
  var pass = _.isEqual(result, 2 ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "2" + "\n     input:  [ 2 ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "2" + "\n     Input:  [ 2 ]"  );
 }
 }); 
 
@@ -94,7 +98,7 @@ test("inf", function () {
  var result = suites.mult.apply(null, [ Infinity ]);
  var pass = _.isEqual(result, Infinity ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "Infinity" + "\n     input:  [ Infinity ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "Infinity" + "\n     Input:  [ Infinity ]"  );
 }
 }); 
 
@@ -102,7 +106,7 @@ test("inf -inf", function () {
  var result = suites.mult.apply(null, [ Infinity, -Infinity ]);
  var pass = _.isEqual(result, -Infinity ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "-Infinity" + "\n     input:  [ Infinity, -Infinity ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "-Infinity" + "\n     Input:  [ Infinity, -Infinity ]"  );
 }
 }); 
 
@@ -110,7 +114,19 @@ test("inf -inf 0", function () {
  var result = suites.mult.apply(null, [ Infinity, -Infinity, 0 ]);
  var pass = _.isEqual(result, NaN ); 
 if (!pass) {
-  throw new Error (util.inspect(result) + " not equal to " + "NaN" + "\n     input:  [ Infinity, -Infinity, 0 ]"  );
+  throw new Error (util.inspect(result) + " not equal to " + "NaN" + "\n     Input:  [ Infinity, -Infinity, 0 ]"  );
 }
 }); 
+
+test("bad args", function () {
+ var flag = true; try {
+  suites.mult.apply(null, [ '4' ]); 
+} catch (e) {
+  flag = false;
+  if (_.isEqual(e.toString(), "Error: not a number") ) {
+    throw new Error ("wrong error", e);
+  }
+}
+if (flag) {
+  throw new Error ("failed to throw error");}}); 
 

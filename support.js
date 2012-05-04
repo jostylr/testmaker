@@ -139,10 +139,10 @@ var writeTests = function () {
       ret += 'test("' + test + '", function () {\n ';
       if (cur.out[0] === 'error') {
         ret += 'var flag = true; try {\n  suites.' + suite + '.apply(null, ' 
-            + util.inspect(cur.inp, false, null) + ') ); \n'
+            + util.inspect(cur.inp, false, null) + '); \n'
             + '} catch (e) {\n'
             + '  flag = false;\n'
-            + '  if (_.isEqual(e, ' + cur.out[1] + ') ) {\n'
+            + '  if (! _.isEqual(e.toString(), "' + cur.out[1] + '") ) {\n'
             + '    throw new Error ("wrong error", e);\n'
             + '  }\n'
             + '}\n'
@@ -305,7 +305,7 @@ c.runTest = function (f, input, testname) {
       try {
         gl.out[suite][testname] = result = f.apply(null, input);
       } catch (e) {
-        gl.out[suite][testname] = result = ["error", e];
+        gl.out[suite][testname] = result = ["error", e.toString()];
         err = true;
       }  
       if (gl.data[suite][testname]) {
