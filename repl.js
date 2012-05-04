@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /*globals module, require, console, exports*/
 
 var util = require('util');

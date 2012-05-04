@@ -8,7 +8,7 @@ var util = require('util');
 
 //shared global between here and repl
 // depth controls inspect level, version controls whether to version the save files
-var gl = {depth : null, version: false, dir : './pretests/', testdir : './test/'
+var gl = {depth : null, version: false, dir : '/pretest/', testdir : '/test/'
   , history : [], names : {}, inp: {}, out : {}, data : {}, errors : [], count:0
 };
 
@@ -169,8 +169,9 @@ var writeTests = function () {
 
 //save current data state to file
 c.save = function (fname, version) {
-  var testname = gl.testdir + (fname || gl.file) + '.js';
-  fname = gl.dir + (fname || gl.file);
+  var cwd = process.cwd();
+  var testname = cwd + gl.testdir + (fname || gl.file) + '.js';
+  fname = cwd + gl.dir + (fname || gl.file);
   version = version || gl.version;
   try {
     if (version === true) {
@@ -237,11 +238,12 @@ c.load = function (fname) {
    //clear r
    c.empty(r);
    
+   var cwd = process.cwd();
    // load file
    try {
-     gl.text = fs.readFileSync(gl.dir+fname+'.js', 'utf8').split('//----')[0];
-     delete require.cache[require.resolve(gl.dir+fname+'.js')];
-     gl.current = require(gl.dir+fname+'.js');
+     gl.text = fs.readFileSync(cwd + gl.dir+fname+'.js', 'utf8').split('//----')[0];
+     delete require.cache[require.resolve(cwd + gl.dir+fname+'.js')];
+     gl.current = require(cwd + gl.dir+fname+'.js');
    } catch (e) {
      gl.errors.push(["failed to load file: ", e]);
      return "failed to load file: " + e;
