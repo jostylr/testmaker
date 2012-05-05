@@ -2,6 +2,9 @@
 
 var _ = require('underscore');
 
+
+//----
+
 module.exports.suites = {
   sum : function () {
     var i
@@ -27,7 +30,7 @@ module.exports.suites = {
     return prod;
     
   }
-}
+};
 
 
 //----

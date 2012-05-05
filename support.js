@@ -4,20 +4,33 @@
 var _ = require('underscore');
 var fs = require('fs');
 var util = require('util');
-
+var jsb = require('prettyweb').js; 
 
 //shared global between here and repl
 // depth controls inspect level, version controls whether to version the save files
 var gl = {depth : null, version: false, dir : '/pretest/', testdir : '/test/'
+  , jsb : {'indent_size' : 2, indent_char : ' ', 'preserve_newlines'  : true, 'preserve_max_newlines' : 3
+          , 'jslint_happy' : true, 'brace_style' : "end-expand", 'space_before_conditional': true  }
   , history : [], names : {}, inp: {}, out : {}, data : {}, errors : [], count:0
 };
 
+var testWrap; 
+
+
 var r = {};
+
+//s adds suite
+var s = function (suite, f) {
+  f.suite = suite;
+  s[suite] = f;
+  r[suite] = testWrap(suite);
+};
 
 var c = {};
 
 c.gl = gl;
 c.r = r;
+c.s = s;
 
 c.itemRenderer = function (pos, options) {
 
@@ -90,13 +103,13 @@ c.list = function (pos, options) {
   var ret, i, n, filter;
   if (_.isNumber(pos)) {
     //siod for options means  status, input, output, data
-    return c.itemRenderer(pos, options || 'sio');
+    return c.itemRenderer(pos, options || 'siod');
   } else { //pos becomes a filter string (ftne: false, true, new, error), options is again a string of return
     filter = c.itemFilter(pos || '!t');
     ret = [];
     n = filter.length;
     for (i = 0; i < n; i += 1) {
-      ret.push(c.itemRenderer(filter[i], options || 's'));
+      ret.push(c.itemRenderer(filter[i], options || 'siod'));
     }
     return ret;
   }
@@ -111,6 +124,9 @@ c.store = function (pos) {
   }
   var s = gl.names[pos][0];
   var t = gl.names[pos][1];
+  if (! gl.data.hasOwnProperty(s) ) {
+    gl.data[s] = {};
+  }
   gl.data[s][t] = {inp: gl.inp[s][t], out : gl.out[s][t]};  
   gl.names[pos][2] = true; //change status
   return pos + " stored";
@@ -124,6 +140,15 @@ c.stall = function () {
     c.store(i);
   }
   return "all tests stored, not saved";
+};
+
+var writeFunctions = function () {
+  var ret = [];
+  for (suite in s) {
+    ret.push(suite + ' : ' + s[suite].toString() );
+  }
+  ret = 'suites = {\n  ' + ret.join('\n  ,  ') + '\n};\n\n';
+  return ret;
 };
 
 var writeTests = function () {
@@ -157,7 +182,7 @@ var writeTests = function () {
             + 'if (!pass) {\n'
             + '  throw new Error (util.inspect(result) + " not equal to " + "' + util.inspect(cur.out, false, null) + '" + "\\n     Input:  '
             + util.inspect(cur.inp, false, null) + '"  );\n'
-            + '}\n'
+            + '}\n';
       }
       ret += '}); \n\n';
     }
@@ -180,13 +205,13 @@ c.save = function (fname, version) {
       fs.rename(fname+'.js', fname+'_'+version+'.js');
     }
     // write in pretest
-    fs.writeFileSync(fname + '.js', gl.text 
-      + '//----\n var data = ' + util.inspect(gl.data, false, null) + ';\n'
-      + 'if (module) {\n module.exports.data = data;\n}'
+    fs.writeFileSync(fname + '.js', jsb(gl.text + '//----\n' + 'module.exports.' + writeFunctions()
+      + '\nvar data = ' + util.inspect(gl.data, false, null) + ';\n'
+      + '\n\nmodule.exports.data = data;', gl.jsb)
       , 'utf8'
     );
     // write out tests
-    fs.writeFileSync(testname, gl.text.replace('module.exports.suites', 'suites') + writeTests() );
+    fs.writeFileSync(testname, jsb ( gl.text + writeFunctions() + writeTests() , gl.jsb) );
     
     return "successfully saved";
    } catch (e) {
@@ -205,15 +230,18 @@ c.empty = function (obj) {
 
 // r.sum('two', 3, 4)
 // almost call the function, but message name and then arguments
-c.testWrap = function (f) {
+testWrap = function (suite) {
   return function () {
-    return c.runTest(f, Array.prototype.slice.call(arguments, 1), arguments[0]);
+    return c.runTest(s[suite], Array.prototype.slice.call(arguments, 1), arguments[0], suite);
   };
 };
 
 // load a file, run tests, report results
 c.load = function (fname) {
   var suites, suite;
+  
+  var cwd = process.cwd();
+  
   //push history: 
   if (gl.file) {
     gl.history.push({
@@ -234,11 +262,13 @@ c.load = function (fname) {
   gl.data = {};
   gl.errors = [];
   gl.count = 0;
+  
    
    //clear r
    c.empty(r);
+   c.empty(s);
    
-   var cwd = process.cwd();
+   
    // load file
    try {
      gl.text = fs.readFileSync(cwd + gl.dir+fname+'.js', 'utf8').split('//----')[0];
@@ -255,9 +285,9 @@ c.load = function (fname) {
    
    suites = gl.current.suites;
    for (suite in suites) {
-     //each suite is a function, store the suite name in the function for use in run
-     suites[suite].suite = suite;
-     r[suite] = c.testWrap(suites[suite]);
+     s(suite, suites[suite]);
+//     s[suite] = suites[suite];
+//     r[suite] = c.testWrap(suites[suite], suite);
    }
    
    
@@ -283,8 +313,8 @@ c.initObj = function (suite) {
 
 
 // the real basic run example
-c.runTest = function (f, input, testname) {
-  var suite, result, pass, err;
+c.runTest = function (f, input, testname, suite) {
+  var result, pass, err;
   if (!input) {
     input = f; 
     f = gl.defaultF;
@@ -296,7 +326,7 @@ c.runTest = function (f, input, testname) {
     throw new Error(["no f specified, no default either", f, input, testname]);
   }
   testname = testname || JSON.stringify(input);
-  suite = f.suite;
+  suite = suite || f.suite;
   
   c.initObj(suite);
   gl.inp[suite][testname] = input;
@@ -332,15 +362,22 @@ c.runTest = function (f, input, testname) {
 };
 
 
-c.runTests = function (suites) { //data object here
-  var suite, tests, test, f;
+c.runTests = function (data) { //data object here  or array of keys
+  var suite, tests, test,  arr, i, n;
   gl.count = 0; //reset count to 0 of failed tests
-  for (suite in suites) {
-    if (gl.current.suites.hasOwnProperty(suite)) {
-      f = gl.current.suites[suite];
-      tests = suites[suite];
+  if (_.isArray(data)) {
+    arr = data;
+    data = {};
+    n = arr.length;
+    for (i = 0; i < n; i += 1) {
+      data[arr[i]] = gl.data[arr[i]];
+    }
+  }
+  for (suite in data) {
+    if (r.hasOwnProperty(suite)) {
+      tests = data[suite];
       for (test in tests) {
-        c.runTest(f, tests[test].inp, test);
+        r[suite].apply(null, [test].concat(tests[test].inp) );
       }
     } else {
       gl.errors.push(["no function for ", suite]);
