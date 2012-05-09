@@ -18,19 +18,28 @@ var testWrap;
 
 
 var r = {};
+var t = {};
 
 //s adds suite
-var s = function (suite, f) {
+var q = function (suite, f) {
   f.suite = suite;
-  s[suite] = f;
+  q[suite] = f;
   r[suite] = testWrap(suite);
+  t[suite] = function () {
+    var args = Array.prototype.slice.call(arguments);
+    var str = args.toString();
+    args.unshift(str);
+    return r[suite].apply(null, args);
+  };
+  return "suite " + suite + "add";
 };
 
 var c = {};
 
 c.gl = gl;
 c.r = r;
-c.s = s;
+c.q = q;
+c.t = t;
 
 c.itemRenderer = function (pos, options) {
 
@@ -116,6 +125,9 @@ c.list = function (pos, options) {
   
 };
 
+c.all = function () {
+  return c.list('!');
+}
 
 //store an output into data
 c.store = function (pos) {
@@ -143,9 +155,10 @@ c.stall = function () {
 };
 
 var writeFunctions = function () {
+  var suite;
   var ret = [];
-  for (suite in s) {
-    ret.push(suite + ' : ' + s[suite].toString() );
+  for (suite in q) {
+    ret.push(suite + ' : ' + q[suite].toString() );
   }
   ret = 'suites = {\n  ' + ret.join('\n  ,  ') + '\n};\n\n';
   return ret;
@@ -220,6 +233,12 @@ c.save = function (fname, version) {
    
 };
 
+c.s = function (pos, fname, version) {
+  c.store(pos);
+  c.save(fname, version);
+  return "saved and stored";
+};
+
 //empties an object. needed for sharing
 c.empty = function (obj) {
   var key;
@@ -232,8 +251,27 @@ c.empty = function (obj) {
 // almost call the function, but message name and then arguments
 testWrap = function (suite) {
   return function () {
-    return c.runTest(s[suite], Array.prototype.slice.call(arguments, 1), arguments[0], suite);
+    return c.runTest(q[suite], Array.prototype.slice.call(arguments, 1), arguments[0], suite);
   };
+};
+
+var clearCache = function (base) {
+  var key, term
+    , search = [base]
+    , cache = require.cache
+  ;
+  
+  delete require.cache[base];
+  while (search.length > 0) {
+    term = search.pop();
+    for (key in cache) {
+      if (cache[key].parent.id === term ) {
+        search.push(key);
+        delete require.cache[key];
+      }
+    }    
+  }
+  
 };
 
 // load a file, run tests, report results
@@ -266,13 +304,14 @@ c.load = function (fname) {
    
    //clear r
    c.empty(r);
-   c.empty(s);
+   c.empty(q);
+   c.empty(t);
    
    
    // load file
    try {
      gl.text = fs.readFileSync(cwd + gl.dir+fname+'.js', 'utf8').split('//----')[0];
-     delete require.cache[require.resolve(cwd + gl.dir+fname+'.js')];
+     clearCache(require.resolve(cwd + gl.dir+fname+'.js') );
      gl.current = require(cwd + gl.dir+fname+'.js');
    } catch (e) {
      gl.errors.push(["failed to load file: ", e]);
@@ -285,7 +324,7 @@ c.load = function (fname) {
    
    suites = gl.current.suites;
    for (suite in suites) {
-     s(suite, suites[suite]);
+     q(suite, suites[suite]);
 //     s[suite] = suites[suite];
 //     r[suite] = c.testWrap(suites[suite], suite);
    }

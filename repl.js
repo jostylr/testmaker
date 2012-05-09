@@ -6,7 +6,10 @@ var util = require('util');
 var _ = require('underscore')
 var c = require('./support');
 
+
 var gl = c.gl;
+
+
 
 //repl initialization
 var repl = require('repl');
@@ -15,8 +18,18 @@ repl.writer = function (obj) {return util.inspect(obj, false, gl.depth, true);};
 var rs = repl.start('>');  //{prompt:'>', writer : function (obj) {return util.inspect(obj, false, null, true);}});
 //store things in c for easy access. mainly functions. data is probably best in gl object
 
+
+
 _.extend(rs.context, c);
 
 rs.context.l = function () {
   return c.load('first');
 }
+
+
+if (process.argv.length > 2) {
+  console.log(c.load(process.argv[2]));
+}
+
+
+
