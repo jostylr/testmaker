@@ -25,10 +25,12 @@ See first.js in the pretests folder.
 * `store()` number for storing or last one
 * `stall()`
 * `save(file, version)` no args will lead to saving of last loaded file
+* `s()` stores and saves the last one. 
 * `reload()` will reload last file
 * `runTest(f, input, testname)` The r[f] is an alias to this. If no testname, input string is used.
 * `runTests(suites)` will run all the tests in suites object or current data.
-
+* `r[suite](msg, arg1, arg2, ..)` creates a test case with msg as label and uses the arg1, arg2, .. 
+* `t[suite](arg1, ...)` uses the arguments as an identifier. 
 
 ## TODO
 
@@ -38,7 +40,7 @@ creating the suite functions in repl and creating files. need a new command, rec
 
 figure out browser testing. should be trivial. 
 
-command line arguments:  various options such as default dir, depth, file to load initially, array of files to cycle through. 
+Has Filename already thought not in an extensible way. command line arguments:  various options such as default dir, depth, file to load initially, array of files to cycle through. 
 
 example with jquery and jsdom to generate browser interaction tests.
 

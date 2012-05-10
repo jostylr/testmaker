@@ -20,18 +20,29 @@ var testWrap;
 var r = {};
 var t = {};
 
-//s adds suite
+//q adds suite. if suite is an array, then each is associated with f
 var q = function (suite, f) {
-  f.suite = suite;
-  q[suite] = f;
-  r[suite] = testWrap(suite);
-  t[suite] = function () {
-    var args = Array.prototype.slice.call(arguments);
-    var str = args.toString();
-    args.unshift(str);
-    return r[suite].apply(null, args);
-  };
-  return "suite " + suite + "add";
+  var suites, i, n;
+  if (_.isArray(suite)) {
+    suites = suite;
+    n = suites.length;
+  } else {
+    suites = [suite];
+    n = 1;
+  }
+  for (i = 0; i < n; i += 1) {
+    suite = suites[i];
+    f.suite = suite;
+    q[suite] = f;
+    r[suite] = testWrap(suite);
+    t[suite] = function () {
+      var args = Array.prototype.slice.call(arguments);
+      var str = args.toString();
+      args.unshift(str);
+      return r[suite].apply(null, args);
+    };
+  }
+  return "Suite" + (n === 1 ? " " : "s ")  + suites.join(",") + " added.";
 };
 
 var c = {};
@@ -193,8 +204,8 @@ var writeTests = function () {
             + util.inspect(cur.inp, false, null) + ');\n '
             + 'var pass = _.isEqual(result, ' + util.inspect(cur.out, false, null) + ' ); \n'
             + 'if (!pass) {\n'
-            + '  throw new Error (util.inspect(result) + " not equal to " + "' + util.inspect(cur.out, false, null) + '" + "\\n     Input:  '
-            + util.inspect(cur.inp, false, null) + '"  );\n'
+            + "  throw new Error (util.inspect(result) + \" not equal to \" + \"" + util.inspect(cur.out, false, null).replace(/\n/g, "\\n") + "\" + \"\\n     Input:  "
+            + util.inspect(cur.inp, false, null).replace(/\s/g, "") + "\"  );\n"
             + '}\n';
       }
       ret += '}); \n\n';
@@ -224,7 +235,7 @@ c.save = function (fname, version) {
       , 'utf8'
     );
     // write out tests
-    fs.writeFileSync(testname, jsb ( gl.text + writeFunctions() + writeTests() , gl.jsb) );
+    fs.writeFileSync(testname, jsb ( gl.text + 'var ' + writeFunctions() + writeTests() , gl.jsb) );
     
     return "successfully saved";
    } catch (e) {
