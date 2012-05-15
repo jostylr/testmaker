@@ -212,12 +212,12 @@ var writeTests = function () {
     for (test in gl.data[suite]) {
       cur = gl.data[suite][test];
       ret += 'test("' + test + '", function () {\n ';
-      if (cur.out[0] === 'error') {
+      if (cur.out && cur.out[0] === 'error') {
         ret += 'var flag = true; try {\n  suites.' + suite + '.apply(null, ' 
             + util.inspect(cur.inp, false, null) + '); \n'
             + '} catch (e) {\n'
             + '  flag = false;\n'
-            + '  if (! _.isEqual(e.toString(), "' + cur.out[1] + '") ) {\n'
+            + '  if (! _.isEqual(e.toString(), \'' + cur.out[1].toString().replace(/\\/g, '\\\\' ) + '\') ) {\n'
             + '    throw new Error ("wrong error", e);\n'
             + '  }\n'
             + '}\n'
@@ -265,7 +265,7 @@ c.save = function (fname, version) {
     
     return "successfully saved";
    } catch (e) {
-     return ["failed to save", e];
+     throw(e)
    }
    
 };
