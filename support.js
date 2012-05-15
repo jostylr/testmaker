@@ -59,6 +59,10 @@ c.itemRenderer = function (pos, options) {
     ;
   options = options || "s";
 
+  if (pos < 0) {
+    pos = gl.names.length + pos;
+  }
+
   s = names[pos][0];
   t = names[pos][1];
   //string iod to add input, output, data. all optional. default iod
@@ -121,6 +125,23 @@ c.itemFilter = function (filter) {
 //lists all outputs name and status or the output of the numbered one.
 c.list = function (pos, options) {
   var ret, i, n, filter;
+  if (pos === "z") {
+    filter = c.itemFilter('!t');
+    if (filter.length > 0) {
+      return c.itemRenderer(filter[filter.length -1], options || 'siod');          
+    } else {
+      return "all good";
+    }
+  }
+  if (pos === "a") {
+    filter = c.itemFilter('!t');
+    if (filter.length > 0) {
+      return c.itemRenderer(filter[0], options || 'siod');          
+    } else {
+      return "all good";
+    }
+  }
+  
   if (_.isNumber(pos)) {
     //siod for options means  status, input, output, data
     return c.itemRenderer(pos, options || 'siod');
@@ -143,7 +164,12 @@ c.all = function () {
 //store an output into data
 c.store = function (pos) {
   if (typeof pos === "undefined") {
-    pos = gl.names.length-1;
+    filter = c.itemFilter('!t');
+    if (filter.length > 0) {
+     pos = filter[filter.length -1];
+    } else {
+     pos = gl.names.length - 1;
+    }
   }
   var s = gl.names[pos][0];
   var t = gl.names[pos][1];
@@ -169,7 +195,7 @@ var writeFunctions = function () {
   var suite;
   var ret = [];
   for (suite in q) {
-    ret.push(suite + ' : ' + q[suite].toString() );
+    ret.push("'" + suite + "'" + ' : ' + q[suite].toString() );
   }
   ret = 'suites = {\n  ' + ret.join('\n  ,  ') + '\n};\n\n';
   return ret;
