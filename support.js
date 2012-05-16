@@ -125,6 +125,8 @@ c.itemFilter = function (filter) {
 //lists all outputs name and status or the output of the numbered one.
 c.list = function (pos, options) {
   var ret, i, n, filter;
+  
+  // lists last not true
   if (pos === "z") {
     filter = c.itemFilter('!t');
     if (filter.length > 0) {
@@ -133,7 +135,9 @@ c.list = function (pos, options) {
       return "all good";
     }
   }
-  if (pos === "a") {
+  
+  //lists first not true if nothing passed. same as save
+  if (typeof pos === "undefined") {
     filter = c.itemFilter('!t');
     if (filter.length > 0) {
       return c.itemRenderer(filter[0], options || 'siod');          
@@ -163,14 +167,27 @@ c.all = function () {
 
 //store an output into data
 c.store = function (pos) {
+  //store first not true one if pos not defined
   if (typeof pos === "undefined") {
     filter = c.itemFilter('!t');
     if (filter.length > 0) {
-     pos = filter[filter.length -1];
+     pos = filter[0];
     } else {
      pos = gl.names.length - 1;
     }
   }
+  
+  //stores last not true element
+  if (pos === "z") {
+    filter = c.itemFilter('!t');
+    if (filter.length > 0) {
+     pos = filter[ filter.length -1];
+    } else {
+     pos = gl.names.length - 1;
+    }
+  }
+  
+  
   var s = gl.names[pos][0];
   var t = gl.names[pos][1];
   if (! gl.data.hasOwnProperty(s) ) {
