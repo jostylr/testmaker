@@ -55,11 +55,11 @@ This gives a test of how it goes. If you need to modify the original files, just
 ## REPL Commands
 
 * `load(file)`  Give the filename and it will be loaded and any tests in it will be run. 
-* `list()` will list all the tests that have not passed. They may disagree with existing tests (status: false), there may be no test (status: new), 
+* `list()` will show first not true item. Use 'z' to show last not true item. It can do more.
 * `store()` number for storing or last one
 * `stall()`
 * `save(file, version)` no args will lead to saving of last loaded file
-* `s()` stores and saves the last one. 
+* `s()` stores and saves the first not true item. use 'z' to show last not true item.
 * `reload()` will reload last file
 * `runTest(f, input, testname)` The r[f] is an alias to this. If no testname, input string is used.
 * `runTests(suites)` will run all the tests in suites object or current data.
@@ -69,6 +69,8 @@ This gives a test of how it goes. If you need to modify the original files, just
 ## TODO
 
 async testing
+
+Implement isEqual to 1) allow for numerical fuzziness and printing (and treating -0 and +0 as same) 2) reporting differences between the objects. 
 
 creating the suite functions in repl and creating files. need a new command, record command.
 
