@@ -1,5 +1,5 @@
 /*globals module, require, console, exports, process*/
-
+/*jshint laxcomma:true, laxbreak:true */
 
 var _ = require('underscore');
 var fs = require('fs');
@@ -30,17 +30,22 @@ var q = function (suite, f) {
     suites = [suite];
     n = 1;
   }
-  for (i = 0; i < n; i += 1) {
-    suite = suites[i];
-    f.suite = suite;
-    q[suite] = f;
-    r[suite] = testWrap(suite);
-    t[suite] = function () {
+
+  var tfunc = function (suite) {
+    return function () {
       var args = Array.prototype.slice.call(arguments);
       var str = args.toString();
       args.unshift(str);
       return r[suite].apply(null, args);
     };
+  };
+
+  for (i = 0; i < n; i += 1) {
+    suite = suites[i];
+    f.suite = suite;
+    q[suite] = f;
+    r[suite] = testWrap(suite);
+    t[suite] = tfunc(suite);
   }
   return "Suite" + (n === 1 ? " " : "s ")  + suites.join(",") + " added.";
 };
@@ -109,7 +114,7 @@ c.itemFilter = function (filter) {
       break;
       case "n" : action["new"] = 1;
       break;
-      case "e" : action["error"] = 1;
+      case "e" : action.error = 1;
       break;
     }
   }
@@ -163,10 +168,11 @@ c.list = function (pos, options) {
 
 c.all = function () {
   return c.list('!');
-}
+};
 
 //store an output into data
 c.store = function (pos) {
+  var filter;
   //store first not true one if pos not defined
   if (typeof pos === "undefined") {
     filter = c.itemFilter('!t');
@@ -196,6 +202,45 @@ c.store = function (pos) {
   gl.data[s][t] = {inp: gl.inp[s][t], out : gl.out[s][t]};  
   gl.names[pos][2] = true; //change status
   return pos + " stored";
+};
+
+//modify out or make it null
+c.out = function (pos, out) {
+  var filter;
+
+  //store first not true one if pos not defined
+  if (typeof pos === "undefined") {
+    filter = c.itemFilter('!t');
+    if (filter.length > 0) {
+     pos = filter[0];
+    } else {
+     pos = gl.names.length - 1;
+    }
+  }
+  
+  //stores last not true element
+  if (pos === "z") {
+    filter = c.itemFilter('!t');
+    if (filter.length > 0) {
+     pos = filter[ filter.length -1];
+    } else {
+     pos = gl.names.length - 1;
+    }
+  }
+  
+  
+  var s = gl.names[pos][0];
+  var t = gl.names[pos][1];
+  if (! gl.data.hasOwnProperty(s) ) {
+    gl.data[s] = {};
+  }
+  if (typeof out !== "undefined") {
+    gl.out[s][t] = out;  
+  } else {
+    gl.out[s][t] = null;      
+  }
+  return pos + " out modified";
+  
 };
 
 //store all--unwise to use
@@ -247,7 +292,8 @@ var writeTests = function () {
             + util.inspect(cur.inp, false, null) + ');\n '
             + 'var pass = _.isEqual(result, ' + util.inspect(cur.out, false, null) + ' ); \n'
             + 'if (!pass) {\n'
-            + "  throw new Error (util.inspect(result) + \" not equal to \" + \"" + util.inspect(cur.out, false, null).replace(/\n/g, "\\n") + "\" + \"\\n     Input:  "
+            + "  throw new Error (util.inspect(result) + \" not equal to \" + \"" 
+            + util.inspect(cur.out, false, null).replace(/\n/g, "\\n") + "\" + \"\\n     Input:  "
             + util.inspect(cur.inp, false, null).replace(/\s/g, "") + "\"  );\n"
             + '}\n';
       }
@@ -282,7 +328,7 @@ c.save = function (fname, version) {
     
     return "successfully saved";
    } catch (e) {
-     throw(e)
+     throw(e);
    }
    
 };
@@ -423,7 +469,7 @@ c.runTest = function (f, input, testname, suite) {
   
   c.initObj(suite);
   gl.inp[suite][testname] = input;
-  
+
   
   // this should be dealt within the function f calling the real target
     if (_.isArray(input)) {     
@@ -432,7 +478,8 @@ c.runTest = function (f, input, testname, suite) {
       } catch (e) {
         gl.out[suite][testname] = result = ["error", e.toString()];
         err = true;
-      }  
+      } 
+ 
       if (gl.data[suite][testname]) {
         pass = _.isEqual(result, gl.data[suite][testname].out);
         if (pass) {
